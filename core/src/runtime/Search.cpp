@@ -527,7 +527,7 @@ private:
          */
         GlobalPathInitializer()
         {
-            for (const std::string& path :
+            for (const std::string path :
                         {
                             "/usr/lib",
                             "/usr/lib/" IS_LIBRARY_ARCHITECTURE,
