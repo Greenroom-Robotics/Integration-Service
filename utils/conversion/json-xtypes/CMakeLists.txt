@@ -107,30 +107,41 @@ target_include_directories(${PROJECT_NAME}
 ###################################################################################
 # Configure the Integration Service JSON-xTypes examples
 ###################################################################################
-set(EXAMPLE_NAME ${PROJECT_NAME}-example)
+if(BUILD_EXAMPLES)
+    set(EXAMPLE_NAME ${PROJECT_NAME}-example)
 
-add_executable(${EXAMPLE_NAME}
-    example/main.cpp
-    )
+    add_executable(${EXAMPLE_NAME}
+        example/main.cpp
+        )
 
-set_target_properties(${EXAMPLE_NAME}
-    PROPERTIES
-        CXX_STANDARD
-            17
-        POSITION_INDEPENDENT_CODE
-            ON
-    )
+    set_target_properties(${EXAMPLE_NAME}
+        PROPERTIES
+            CXX_STANDARD
+                17
+            POSITION_INDEPENDENT_CODE
+                ON
+        )
 
-target_compile_options(${EXAMPLE_NAME}
-    PRIVATE
-        -Werror -Wall -Wextra -Wpedantic
-    )
+    target_compile_options(${EXAMPLE_NAME}
+        PRIVATE
+            -Werror -Wall -Wextra -Wpedantic
+        )
 
-target_link_libraries(${EXAMPLE_NAME}
-    PRIVATE
-        is::core
-        ${PROJECT_NAME}
-    )
+    target_link_libraries(${EXAMPLE_NAME}
+        PRIVATE
+            is::core
+            ${PROJECT_NAME}
+        )
+
+    install(
+        TARGETS
+            ${EXAMPLE_NAME}
+        DESTINATION
+            "${CMAKE_INSTALL_BINDIR}"
+        COMPONENT
+            ${PROJECT_NAME}
+        )
+endif()
 
 ###################################################################################
 # Install the Integration Service JSON-xTypes conversion library
@@ -178,13 +189,3 @@ install(
     COMPONENT
         ${PROJECT_NAME}
     )
-
-install(
-    TARGETS
-        ${EXAMPLE_NAME}
-    DESTINATION
-        "${CMAKE_INSTALL_BINDIR}"
-    COMPONENT
-        ${PROJECT_NAME}
-    )
-
