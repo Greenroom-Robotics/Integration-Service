@@ -25,22 +25,28 @@ function(is_generate_export_header component_name)
 
   string(TOUPPER ${component_name} UPPER_COMPONENT_NAME)
 
-  set(binary_include_dir ${CMAKE_BINARY_DIR}/include)
   generate_export_header(is-${component_name}
     BASE_NAME is_${component_name}
     EXPORT_MACRO_NAME IS_${UPPER_COMPONENT_NAME}_API
-    EXPORT_FILE_NAME ${binary_include_dir}/is/${component_name}/export.hpp
+    EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/include/is/${component_name}/export.hpp
   )
 
-  file(
-    COPY
-      ${binary_include_dir}/
-    DESTINATION
-      ${CMAKE_INSTALL_PREFIX}/include
+  # file(
+  #   COPY
+  #     ${CMAKE_BINARY_DIR}/include/
+  #   DESTINATION
+  #     ${CMAKE_INSTALL_PREFIX}/include
+  # )
+
+  INSTALL (
+    DIRECTORY ${CMAKE_BINARY_DIR}/include/
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+    FILES_MATCHING PATTERN "*.h*"
   )
 
   target_include_directories(is-${component_name}
     PUBLIC
-      $<BUILD_INTERFACE:${binary_include_dir}>
+      $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
 endfunction()
