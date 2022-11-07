@@ -143,12 +143,7 @@ function(is_install_middleware_plugin)
       INSTALL_DESTINATION ${config_install_dir}
     )
 
-    file(
-      COPY
-        ${config_file_output}
-      DESTINATION
-        ${CMAKE_INSTALL_PREFIX}/lib/cmake/is-${middleware}
-    )
+    install(FILES ${config_file_output} DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/is-${middleware})
 
     if(_ARG_EXTENSIONS)
       install(
