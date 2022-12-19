@@ -31,13 +31,6 @@ function(is_generate_export_header component_name)
     EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/include/is/${component_name}/export.hpp
   )
 
-  # file(
-  #   COPY
-  #     ${CMAKE_BINARY_DIR}/include/
-  #   DESTINATION
-  #     ${CMAKE_INSTALL_PREFIX}/include
-  # )
-
   INSTALL (
     DIRECTORY ${CMAKE_BINARY_DIR}/include/
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include
