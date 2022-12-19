@@ -110,7 +110,7 @@ function(is_install_middleware_plugin)
 
     install(FILES
       ${plugin_library_mix}
-      DESTINATION
+    DESTINATION
       ${CMAKE_INSTALL_PREFIX}/lib/is/${type}/${type}.mix
     )
 
@@ -126,13 +126,16 @@ function(is_install_middleware_plugin)
       list(APPEND extensions ${ext_filename})
     endforeach()
 
-    export(
-      TARGETS
-        ${plugin_library_target}
+    install(
+      EXPORT
+      ${plugin_library_target}
+      DESTINATION
+      ${CMAKE_INSTALL_PREFIX}/lib/cmake/is-${middleware}/
+      NAMESPACE
+        is::
       FILE
-        ${CMAKE_INSTALL_PREFIX}/lib/cmake/is-${middleware}/${plugin_library_target}-target.cmake
-      NAMESPACE is::
-    )
+        ${plugin_library_target}-target.cmake
+      )
 
     include(CMakePackageConfigHelpers)
     set(config_file_input "${IS_TEMPLATE_DIR}/middleware-config.cmake.in")
