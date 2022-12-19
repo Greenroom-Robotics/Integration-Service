@@ -102,16 +102,16 @@ function(is_install_middleware_plugin)
     )
 
     set(plugin_library_mix "${mix_build_dir}/is/${type}/${type}.mix")
-    set(plugin_library_install_mix "${CMAKE_INSTALL_PREFIX}/lib/is/${type}/${type}.mix")
 
     file(GENERATE
       OUTPUT ${plugin_library_mix}
       INPUT  ${plugin_library_mix_template}
     )
 
-    file(GENERATE
-      OUTPUT ${plugin_library_install_mix}
-      INPUT  ${plugin_library_mix_template}
+    install(FILES
+      ${plugin_library_mix}
+      DESTINATION
+      ${CMAKE_INSTALL_PREFIX}/lib/is/${type}/${type}.mix
     )
 
   endforeach()
