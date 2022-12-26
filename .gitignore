@@ -108,3 +108,9 @@ ENV/
 .catkin_workspace
 devel/
 build/
+node_modules/
+log/
+build/
+install/
+yarn.lock
+Dockerfile
