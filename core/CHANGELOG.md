@@ -1,3 +1,10 @@
+## is-core [1.0.1](https://github.com/Greenroom-Robotics/Integration-Service/compare/is-core@1.0.0...is-core@1.0.1-amd64) (2023-02-14)
+
+
+### Bug Fixes
+
+* install mix file correctly ([d737bd2](https://github.com/Greenroom-Robotics/Integration-Service/commit/d737bd2b76752940c60b14478d092e64c80394f2))
+
 ## is-core 1.0.0 (2022-12-26)
 
 
