@@ -111,7 +111,7 @@ function(is_install_middleware_plugin)
     install(FILES
       ${plugin_library_mix}
     DESTINATION
-      ${CMAKE_INSTALL_PREFIX}/lib/is/${type}/${type}.mix
+      ${CMAKE_INSTALL_PREFIX}/lib/is/${type}/
     )
 
   endforeach()
