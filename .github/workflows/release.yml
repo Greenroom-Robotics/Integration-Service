@@ -4,18 +4,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  release:
-    name: Release
-    runs-on: ubuntu-latest
+  release_amd:
+    name: Release AMD
+    runs-on: buildjet-2vcpu-ubuntu-2204
 
     steps:
       - name: Checkout this repository
         uses: actions/checkout@v3
-        with:
-          submodules: "recursive"
 
       - name: Semantic release
         uses: Greenroom-Robotics/ros_semantic_release_action@main
         with:
           token: ${{ secrets.API_TOKEN_GITHUB }}
-          public: "true"
+          arch: amd64
+          public: true
+          changelog: false
+
+  release_arm:
+    name: Release ARM
+    runs-on: buildjet-2vcpu-ubuntu-2204-arm
+
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v3
+
+      - name: Semantic release
+        uses: Greenroom-Robotics/ros_semantic_release_action@main
+        with:
+          token: ${{ secrets.API_TOKEN_GITHUB }}
+          arch: arm64
+          public: true
+          changelog: false
