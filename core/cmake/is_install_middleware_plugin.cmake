@@ -117,8 +117,8 @@ function(is_install_middleware_plugin)
   endforeach()
 
   if(NOT _ARG_NO_CONFIG)
-
-    set(config_install_dir ${CMAKE_INSTALL_LIBDIR}/cmake/is-${middleware})
+    string(REPLACE "/${CMAKE_LIBRARY_ARCHITECTURE}" "" CMAKE_INSTALL_LIBDIR_ARCHIND "${CMAKE_INSTALL_LIBDIR}")
+    set(config_install_dir ${CMAKE_INSTALL_LIBDIR_ARCHIND}/cmake/is-${middleware})
 
     set(extensions)
     foreach(extension ${_ARG_EXTENSIONS})
@@ -146,7 +146,7 @@ function(is_install_middleware_plugin)
       INSTALL_DESTINATION ${config_install_dir}
     )
 
-    install(FILES ${config_file_output} DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/is-${middleware})
+    install(FILES ${config_file_output} DESTINATION ${CMAKE_INSTALL_LIBDIR_ARCHIND}/cmake/is-${middleware})
 
     if(_ARG_EXTENSIONS)
       install(
