@@ -82,23 +82,20 @@ function(is_mix_install_extension)
   )
 
   set(base_install_dir "${CMAKE_INSTALL_PREFIX}/../is-${middleware}/share/is-${_ARG_IDL_TYPE}-${middleware}-mix")
-  file(
-    COPY
-      ${config_output}
-      ${extension_output}
-    DESTINATION
-      ${base_install_dir}
+  install(FILES
+    ${config_output} ${extension_output}
+  DESTINATION
+    ${base_install_dir}/
   )
 
   set(template_install_dir "${base_install_dir}/templates")
-  file(
-    COPY
+  install(FILES
       ${_ARG_MESSAGE_SOURCES}
       ${_ARG_MESSAGE_HEADERS}
       ${_ARG_SERVICE_SOURCES}
       ${_ARG_SERVICE_HEADERS}
     DESTINATION
-      ${template_install_dir}
+      ${template_install_dir}/
   )
 
 endfunction()
