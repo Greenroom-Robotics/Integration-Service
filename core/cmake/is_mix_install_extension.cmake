@@ -81,7 +81,7 @@ function(is_mix_install_extension)
     @ONLY
   )
 
-  set(base_install_dir "${CMAKE_INSTALL_PREFIX}/../is-${middleware}/share/is-${_ARG_IDL_TYPE}-${middleware}-mix")
+  set(base_install_dir "${CMAKE_INSTALL_PREFIX}/share/is-${middleware}/is-${_ARG_IDL_TYPE}-${middleware}-mix")
   install(FILES
     ${config_output} ${extension_output}
   DESTINATION
