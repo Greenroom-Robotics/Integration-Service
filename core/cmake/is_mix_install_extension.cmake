@@ -31,6 +31,7 @@ include(GNUInstallDirs)
 #   [DEPENDENCIES <middleware dependencies>]
 # )
 function(is_mix_install_extension)
+  string(REPLACE "/${CMAKE_LIBRARY_ARCHITECTURE}" "" CMAKE_INSTALL_LIBDIR_ARCHIND "${CMAKE_INSTALL_LIBDIR}")
 
   cmake_parse_arguments(
     _ARG # prefix
@@ -81,7 +82,7 @@ function(is_mix_install_extension)
     @ONLY
   )
 
-  set(base_install_dir "${CMAKE_INSTALL_PREFIX}/share/is-${middleware}/is-${_ARG_IDL_TYPE}-${middleware}-mix")
+  set(base_install_dir "${CMAKE_INSTALL_LIBDIR_ARCHIND}/cmake/is-${_ARG_IDL_TYPE}-${middleware}-mix")
   install(FILES
     ${config_output} ${extension_output}
   DESTINATION
