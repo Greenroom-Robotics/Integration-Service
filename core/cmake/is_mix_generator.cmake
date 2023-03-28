@@ -418,14 +418,10 @@ function(_is_configure_mix_package)
     COMPONENT is-${_ARG_IDL_TYPE}-mix
   )
 
-  set(config_install_dir ${CMAKE_INSTALL_LIBDIR}/cmake/${mix_target})
-
-  set(export_output ${CMAKE_BINARY_DIR}/is/${_ARG_IDL_TYPE}/config/${mix_target}-target.cmake)
-  export(
-    TARGETS
-      ${mix_target}
-    FILE
-      ${export_output}
+  install(
+    EXPORT ${mix_target}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/${mix_target}
+    FILE ${mix_target}-target.cmake
   )
 
   set(config_output ${CMAKE_BINARY_DIR}/is/${_ARG_IDL_TYPE}/config/${mix_target}Config.cmake)
@@ -436,7 +432,7 @@ function(_is_configure_mix_package)
   )
 
   install(FILES
-    ${config_output} ${export_output}
+    ${config_output}
   DESTINATION
     ${CMAKE_INSTALL_PREFIX}/lib/cmake/${mix_target}/
   )
