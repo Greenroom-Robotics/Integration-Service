@@ -306,6 +306,8 @@ function(_is_configure_mix_package)
     ${_ARG_SCRIPT}
   )
 
+  string(REPLACE "/${CMAKE_LIBRARY_ARCHITECTURE}" "" CMAKE_INSTALL_LIBDIR_ARCHIND "${CMAKE_INSTALL_LIBDIR}")
+
   foreach(required_arg _ARG_MIDDLEWARE _ARG_PACKAGE)
     if(NOT ${required_arg})
       message(FATAL_ERROR
@@ -416,14 +418,14 @@ function(_is_configure_mix_package)
     COMPONENT is-${_ARG_IDL_TYPE}-mix
   )
 
-  set(config_install_dir ${CMAKE_INSTALL_LIBDIR}/cmake/${mix_target})
+  # set(config_install_dir ${CMAKE_INSTALL_LIBDIR}/cmake/${mix_target})
 
-  export(
-    TARGETS
-      ${mix_target}
-    FILE
-      ${CMAKE_INSTALL_PREFIX}/lib/cmake/${mix_target}/${mix_target}-target.cmake
-  )
+  # export(
+  #   TARGETS
+  #     ${mix_target}
+  #   FILE
+  #     ${CMAKE_INSTALL_PREFIX}/lib/cmake/${mix_target}/${mix_target}-target.cmake
+  # )
 
   set(config_output ${CMAKE_BINARY_DIR}/is/${_ARG_IDL_TYPE}/config/${mix_target}Config.cmake)
   configure_file(
@@ -432,19 +434,17 @@ function(_is_configure_mix_package)
     @ONLY
   )
 
-  file(
-    COPY
-      ${config_output}
-    DESTINATION
-      ${CMAKE_INSTALL_PREFIX}/lib/cmake/${mix_target}/
+  install(FILES
+    ${config_output}
+  DESTINATION
+    ${CMAKE_INSTALL_PREFIX}/lib/cmake/${mix_target}/
   )
 
   if(_${middleware}_${package}_mix_include_dir)
     if(EXISTS ${_${middleware}_${package}_mix_include_dir})
-      file(
-        COPY
-          ${_${middleware}_${package}_mix_include_dir}/
-        DESTINATION
+      install(DIRECTORY
+        ${_${middleware}_${package}_mix_include_dir}
+          DESTINATION
           ${CMAKE_INSTALL_PREFIX}/include
       )
     endif()
