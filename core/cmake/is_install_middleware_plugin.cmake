@@ -94,7 +94,9 @@ function(is_install_middleware_plugin)
 
   foreach(type ${system_types})
     set(plugin_library_mix_template "${mix_build_dir}/is/${type}/${type}.mix.gen")
-    set(plugin_library_directory "../..")
+    set(plugin_library_directory "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+    cmake_path(RELATIVE_PATH plugin_library_directory BASE_DIRECTORY "${CMAKE_INSTALL_PREFIX}/lib/is/${type}")
+
     configure_file(
       "${IS_TEMPLATE_DIR}/plugin_library.mix.in"
       "${plugin_library_mix_template}"
@@ -113,7 +115,6 @@ function(is_install_middleware_plugin)
     DESTINATION
       ${CMAKE_INSTALL_PREFIX}/lib/is/${type}/
     )
-
   endforeach()
 
   if(NOT _ARG_NO_CONFIG)
