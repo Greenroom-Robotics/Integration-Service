@@ -114,3 +114,6 @@ build/
 install/
 yarn.lock
 Dockerfile
+
+# vscode
+.txt.user

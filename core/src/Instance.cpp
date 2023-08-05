@@ -23,7 +23,7 @@
 
 #include <atomic>
 #include <condition_variable>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <iostream>
 #include <thread>
 
@@ -159,13 +159,15 @@ public:
              * For each systemhandle, creates a working thread that will check that the
              * SystemHandle instance is alive and calls spin_once() to execute pending work.
              */
+            const auto& ref_mw_name = mw_name;
+            const auto& ref_systemhandle_info = systemhandle_info;
             auto runner = [&]()
                     {
                         ++_active_middlewares;
 
                         while (!interrupted && !_quit)
                         {
-                            const bool okay = systemhandle_info.handle->spin_once();
+                            const bool okay = ref_systemhandle_info.handle->spin_once();
 
                             if (!okay)
                             {
@@ -173,7 +175,7 @@ public:
                                 _return_code = 1;
                                 _logger << utils::Logger::Level::ERROR
                                         << "Runtime Error: SystemHandle of middleware named '"
-                                        << mw_name
+                                        << ref_mw_name
                                         << "' has experienced a failure! We will now quit."
                                         << std::endl;
                             }
@@ -314,9 +316,9 @@ public:
         else
         {
             _config_file = config_file;
-            const auto abs_config_path = std::experimental::filesystem::absolute(config_file);
+            const auto abs_config_path = std::filesystem::absolute(config_file);
 
-            if (std::experimental::filesystem::exists(abs_config_path))
+            if (std::filesystem::exists(abs_config_path))
             {
                 Search::set_config_file_directory(abs_config_path.parent_path().string());
             }
@@ -465,7 +467,7 @@ public:
         }
 
         _config_file = vm["config-file"].as<std::string>();
-        if (!std::experimental::filesystem::exists(_config_file))
+        if (!std::filesystem::exists(_config_file))
         {
             std::cerr << "The requested config-file does not exist: " << _config_file
                       << std::endl;
@@ -473,7 +475,7 @@ public:
         }
 
         Search::set_config_file_directory(
-            std::experimental::filesystem::absolute(std::experimental::filesystem::path(
+            std::filesystem::absolute(std::filesystem::path(
                 _config_file).parent_path()).string());
 
         return true;
