@@ -474,9 +474,12 @@ public:
             return false;
         }
 
-        Search::set_config_file_directory(
-            std::filesystem::absolute(std::filesystem::path(
-                _config_file).parent_path()).string());
+        std::filesystem::path configFilePath(_config_file);
+        if (configFilePath.is_relative()) {
+            configFilePath = std::filesystem::absolute(configFilePath);
+        }
+
+        Search::set_config_file_directory(configFilePath.parent_path().string());
 
         return true;
     }
