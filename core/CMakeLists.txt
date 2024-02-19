@@ -58,34 +58,7 @@ endif()
 # External dependencies for the Integration Service Core library
 ###############################################################################
 if(BUILD_LIBRARY)
-  find_package(xtypes QUIET)
-
-  # if not externally provided use the thirdparty as external project
-  if(IS_XTYPES_THIRDPARTY AND NOT xtypes_FOUND)
-    message(STATUS "Updating submodules")
-    execute_process(
-        COMMAND git submodule update --init
-        WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../
-        RESULT_VARIABLE EXECUTE_RESULT
-    )
-
-    if(NOT EXECUTE_RESULT EQUAL 0)
-        message(ERROR "Cannot update git submodules and xtypes are missing")
-    else()
-        include(ExternalProject)
-
-        ExternalProject_Add(xtypes-ext
-            SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/../thirdparty/xtypes
-            INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
-            CMAKE_ARGS
-              -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-              -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-              -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
-              -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>/xtypes
-              -DXTYPES_BUILD_TOOLS=ON
-        )
-    endif()
-  endif()
+  find_package(xtypes REQUIRED)
 
   find_package(yaml-cpp REQUIRED)
 

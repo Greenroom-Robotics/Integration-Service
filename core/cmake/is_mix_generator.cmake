@@ -205,6 +205,12 @@ function(is_mix_generator)
 
     foreach(middleware ${_found_middleware_mixes})
       set(_package_mix_pkg_name is-${_ARG_IDL_TYPE}-${middleware}-${package}-mix)
+
+      if(CMAKE_INSTALL_PREFIX MATCHES "^/opt/ros")
+        # if building a rosdebian then don't find_package in the build ws
+        set(CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH FALSE)
+      endif()
+
       find_package(${_package_mix_pkg_name} QUIET)
       if(${_package_mix_pkg_name}_FOUND)
 
