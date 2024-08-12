@@ -20,6 +20,7 @@
 
 #include <string>
 #include <iostream>
+#include <cstdint>
 #include <is/core/export.hpp>
 
 namespace eprosima {
