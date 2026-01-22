@@ -446,7 +446,7 @@ function(_is_configure_mix_package)
   if(_${middleware}_${package}_mix_include_dir)
     if(EXISTS ${_${middleware}_${package}_mix_include_dir})
       install(DIRECTORY
-        ${_${middleware}_${package}_mix_include_dir}
+        ${_${middleware}_${package}_mix_include_dir}/
           DESTINATION
           ${CMAKE_INSTALL_PREFIX}/include
       )
