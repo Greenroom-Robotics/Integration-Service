@@ -89,6 +89,7 @@ is_generate_export_header(mock)
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
         is::core
+        fastdds
     )
 
 target_include_directories(${PROJECT_NAME}

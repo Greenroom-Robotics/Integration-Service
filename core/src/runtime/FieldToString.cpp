@@ -20,6 +20,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <functional>
 
 namespace eprosima {
 namespace is {
@@ -29,9 +30,6 @@ class FieldToString::Implementation
 {
 public:
 
-    /**
-     * @brief Gets a reference to this Factory class instance.
-     */
     static Implementation& instance()
     {
         static Implementation instance;
@@ -39,86 +37,143 @@ public:
     }
 
     const std::string to_string(
-            eprosima::xtypes::ReadableDynamicDataRef field,
+            const xtypes::DynamicData& parent,
             const std::string& field_name,
             const std::string& details)
     {
-        const std::string& type =
-                (field.type().name().find("std::string") != std::string::npos)
-                ? "std::string"
-                : field.type().name();
-
-        _logger << utils::Logger::Level::DEBUG << "Trying to convert type '" << type
-                << "' to string" << std::endl;
-        const auto it = _conversions.find(type);
-
-        if (it != _conversions.end())
+        // Get the MemberId for this field
+        xtypes::MemberId id = parent->get_member_id_by_name(field_name);
+        if (id == fastdds::dds::MEMBER_ID_INVALID)
         {
-            return it->second(field);
+            throw UnknownFieldToStringCast("<unknown — member not found>", field_name, details);
         }
 
-        _logger << utils::Logger::Level::ERROR << "Failed convert type '" << type
-                << "' to string" << std::endl;
+        // Determine the TypeKind of this member
+        fastdds::dds::DynamicTypeMember::_ref_type member;
+        if (parent->type()->get_member_by_name(member, field_name) !=
+                fastdds::dds::RETCODE_OK)
+        {
+            throw UnknownFieldToStringCast("<unknown — type lookup failed>", field_name, details);
+        }
 
-        throw UnknownFieldToStringCast(type, field_name, details);
+        fastdds::dds::MemberDescriptor::_ref_type desc =
+            fastdds::dds::traits<fastdds::dds::MemberDescriptor>::make_shared();
+        member->get_descriptor(desc);
+        fastdds::dds::TypeKind kind = desc->type()->get_kind();
+
+        _logger << utils::Logger::Level::DEBUG
+                << "Trying to convert TypeKind " << static_cast<int>(kind)
+                << " for field '" << field_name << "' to string" << std::endl;
+
+        const auto it = _conversions.find(kind);
+        if (it != _conversions.end())
+        {
+            return it->second(parent, id);
+        }
+
+        // Special case: string type (TK_STRING8) — not in the primitive map but
+        // handled separately because we can just retrieve it directly.
+        if (kind == fastdds::dds::TK_STRING8)
+        {
+            std::string val;
+            parent->get_string_value(val, id);
+            return val;
+        }
+
+        _logger << utils::Logger::Level::ERROR
+                << "Failed to convert TypeKind " << static_cast<int>(kind)
+                << " for field '" << field_name << "' to string" << std::endl;
+
+        throw UnknownFieldToStringCast(std::to_string(static_cast<int>(kind)),
+                field_name, details);
     }
 
 private:
 
-    using ConversionFunc = std::function<std::string (
-                        eprosima::xtypes::ReadableDynamicDataRef)>;
-    using ConversionMap = std::unordered_map<std::string, ConversionFunc>;
+    using ConversionFunc = std::function<std::string(
+                        const xtypes::DynamicData&, xtypes::MemberId)>;
+    using ConversionMap = std::unordered_map<fastdds::dds::TypeKind, ConversionFunc>;
 
     Implementation()
         : _logger("is::core::FieldToString")
     {
-        _conversions["std::string"] =
-                [](xtypes::ReadableDynamicDataRef field) -> std::string
-                {
-                    return field;
-                };
+        using namespace fastdds::dds;
 
-        add_primitive_conversion<bool>();
-        add_primitive_conversion<char>();
-        add_primitive_conversion<wchar_t>();
-        add_primitive_conversion<int8_t>();
-        add_primitive_conversion<uint8_t>();
-        add_primitive_conversion<int16_t>();
-        add_primitive_conversion<uint16_t>();
-        add_primitive_conversion<int32_t>();
-        add_primitive_conversion<uint32_t>();
-        add_primitive_conversion<int64_t>();
-        add_primitive_conversion<uint64_t>();
-        add_primitive_conversion<float>();
-        add_primitive_conversion<double>();
-        add_primitive_conversion<long double>();
+        _conversions[TK_BOOLEAN] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    bool v; d->get_boolean_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_CHAR8] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    char v; d->get_char8_value(v, id);
+                    return std::string(1, v);
+                };
+        _conversions[TK_INT8] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    int8_t v; d->get_int8_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_UINT8] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    uint8_t v; d->get_uint8_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_INT16] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    int16_t v; d->get_int16_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_UINT16] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    uint16_t v; d->get_uint16_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_INT32] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    int32_t v; d->get_int32_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_UINT32] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    uint32_t v; d->get_uint32_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_INT64] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    int64_t v; d->get_int64_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_UINT64] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    uint64_t v; d->get_uint64_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_FLOAT32] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    float v; d->get_float32_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_FLOAT64] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    double v; d->get_float64_value(v, id);
+                    return std::to_string(v);
+                };
+        _conversions[TK_FLOAT128] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    long double v; d->get_float128_value(v, id);
+                    return std::to_string(static_cast<double>(v));
+                };
+        _conversions[TK_STRING8] =
+                [](const DynamicData::_ref_type& d, MemberId id) -> std::string {
+                    std::string v; d->get_string_value(v, id);
+                    return v;
+                };
     }
 
-    Implementation(
-            const Implementation& /*other*/) = delete;
-
-    Implementation(
-            Implementation&& /*other*/) = delete;
-
+    Implementation(const Implementation&) = delete;
+    Implementation(Implementation&&) = delete;
     ~Implementation() = default;
-
-    /**
-     * @brief Adds conversion functions for primitive types.
-     */
-    template<typename T>
-    void add_primitive_conversion()
-    {
-        _conversions[xtypes::primitive_type<T>().name()] =
-                [](xtypes::ReadableDynamicDataRef field) -> std::string
-                {
-                    T temp = field;
-                    return std::to_string(temp);
-                };
-    }
-
-    /**
-     * Class members.
-     */
 
     ConversionMap _conversions;
     utils::Logger _logger;
@@ -150,10 +205,10 @@ FieldToString::FieldToString(
 
 //==============================================================================
 const std::string FieldToString::to_string(
-        eprosima::xtypes::ReadableDynamicDataRef field,
+        const eprosima::xtypes::DynamicData& parent,
         const std::string& field_name) const
 {
-    return _pimpl.to_string(field, field_name, _details);
+    return _pimpl.to_string(parent, field_name, _details);
 }
 
 //==============================================================================

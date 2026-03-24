@@ -56,8 +56,12 @@ struct RequiredTypes
 
 /**
  * @brief Map used to store the DynamicType name mapped to its representation.
+ *
+ * In the new Fast-DDS XTypes API, DynamicType is accessed exclusively via
+ * DynamicType::_ref_type (a shared_ptr).  The xtypes::DynamicType alias in
+ * Message.hpp already maps to that shared_ptr, so we store it directly here.
  */
-using TypeRegistry = std::map<std::string, xtypes::DynamicType::Ptr>;
+using TypeRegistry = std::map<std::string, xtypes::DynamicType>;
 
 /**
  * @brief Call this macro in a .cpp file of your middleware's plugin library,

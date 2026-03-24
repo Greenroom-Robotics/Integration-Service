@@ -80,7 +80,7 @@ public:
      * @returns A const string representation of the requested field.
      */
     const std::string to_string(
-            eprosima::xtypes::ReadableDynamicDataRef field,
+            const eprosima::xtypes::DynamicData& parent,
             const std::string& field_name) const;
 
     /**

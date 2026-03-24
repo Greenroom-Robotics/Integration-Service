@@ -146,7 +146,7 @@ public:
         const auto it =
                 (only_service
                 ? impl().mock_services.find(_service)
-                : impl().mock_services.find(_service + "_" + request.type().name()));
+                : impl().mock_services.find(_service + "_" + std::string(request->type()->get_name())));
 
         if (it == impl().mock_services.end())
         {
@@ -195,7 +195,7 @@ public:
             TopicSubscriberSystem::SubscriptionCallback* callback,
             const YAML::Node& /*configuration*/) override
     {
-        impl().subscriptions[topic_name].insert(message_type.name());
+        impl().subscriptions[topic_name].insert(std::string(message_type->get_name()));
         impl().is_subscription_callbacks[topic_name] = callback;
         return true;
     }
@@ -211,7 +211,7 @@ public:
             const eprosima::xtypes::DynamicType& message_type,
             const YAML::Node& /*configuration*/) override
     {
-        impl().publishers[topic_name].insert(message_type.name());
+        impl().publishers[topic_name].insert(std::string(message_type->get_name()));
         return std::make_shared<Publisher>(topic_name);
     }
 
@@ -221,7 +221,7 @@ public:
             RequestCallback* callback,
             const YAML::Node& /*configuration*/) override
     {
-        impl().clients[service_name].insert(service_type.name());
+        impl().clients[service_name].insert(std::string(service_type->get_name()));
         impl().is_request_callbacks[service_name] = callback;
         return true;
     }
@@ -231,7 +231,7 @@ public:
             const eprosima::xtypes::DynamicType& service_type,
             const YAML::Node& /*configuration*/) override
     {
-        impl().services[service_name].insert(service_type.name());
+        impl().services[service_name].insert(std::string(service_type->get_name()));
         return std::make_shared<Server>(service_name);
     }
 
@@ -244,7 +244,7 @@ bool publish_message(
 {
     const auto it = impl().subscriptions.find(topic);
     if (it == impl().subscriptions.end() ||
-            it->second.find(msg.type().name()) == it->second.end())
+            it->second.find(std::string(msg->type()->get_name())) == it->second.end())
     {
         return false;
     }

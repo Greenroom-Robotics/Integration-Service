@@ -88,16 +88,14 @@ public:
             if (substitute_it != _substitutions.end() && substitute_it->first == i)
             {
                 const std::string& field_name = substitute_it->second;
-                const xtypes::AggregationType& type =
-                        static_cast<const xtypes::AggregationType&>(message.type());
 
-                if (!type.has_member(field_name))
+                if (message->get_member_id_by_name(field_name) ==
+                        fastdds::dds::MEMBER_ID_INVALID)
                 {
                     throw UnavailableMessageField(field_name, _converter.details());
                 }
 
-                xtypes::ReadableDynamicDataRef data = message[field_name];
-                result += _converter.to_string(data, field_name);
+                result += _converter.to_string(message, field_name);
                 ++substitute_it;
                 continue;
             }

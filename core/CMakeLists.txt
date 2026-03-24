@@ -27,8 +27,7 @@ cmake_minimum_required(VERSION 3.5.0 FATAL_ERROR)
 option(IS_COMPILE_DEBUG "Compile the Integration Service project in debug mode." OFF)
 
 option(BUILD_LIBRARY "Compile the Integration Service" ON)
-
-option(IS_XTYPES_THIRDPARTY "Allow to download thirdparty xtypes repository when needed." ON)
+option(BUILD_TESTS "Build the Integration Service tests" ON)
 
 if(DEFINED CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE_LOWERCASE "" CACHE STRING "Build type to lowercase")
@@ -58,7 +57,7 @@ endif()
 # External dependencies for the Integration Service Core library
 ###############################################################################
 if(BUILD_LIBRARY)
-  find_package(xtypes REQUIRED)
+  find_package(fastdds REQUIRED)
 
   find_package(yaml-cpp REQUIRED)
 
@@ -83,41 +82,6 @@ if(BUILD_LIBRARY)
       src/Config.cpp
       src/Instance.cpp
   )
-
-  # if xtypes is not available use the ExternalProject
-  if(TARGET xtypes-ext)
-
-      # force the build
-      add_dependencies(${PROJECT_NAME} xtypes-ext)
-
-      # mimick xtypes target properties
-      # propagation is required for tools, utils and System Handles 
-      target_compile_features(${PROJECT_NAME}
-          INTERFACE
-              cxx_std_17
-              cxx_variadic_macros
-      )
-
-      ExternalProject_Get_Property(xtypes-ext INSTALL_DIR)
-
-      set_target_properties(xtypes-ext PROPERTIES
-        IDL_VALIDATOR_PATH 
-           ${INSTALL_DIR}/xtypes/bin/xtypes_idl_validator${CMAKE_EXECUTABLE_SUFFIX}
-        )
-  
-      target_include_directories(${PROJECT_NAME}
-        PUBLIC
-          ${INSTALL_DIR}/xtypes/include
-          ${INSTALL_DIR}/xtypes/thirdparty/cpp-peglib/include)
-  
-      if(MSVC)
-          target_compile_options(${PROJECT_NAME}
-            PUBLIC
-                /Zc:preprocessor
-                /execution-charset:UTF-8)
-      endif(MSVC)
-
-  endif()
 
   if (Sanitizers_FOUND)
     add_sanitizers(${PROJECT_NAME})
@@ -164,7 +128,7 @@ if(BUILD_LIBRARY)
   target_link_libraries(${PROJECT_NAME}
     PUBLIC
       yaml-cpp
-      $<TARGET_NAME_IF_EXISTS:xtypes>
+      fastdds
     PRIVATE
       Boost::program_options
       $<$<PLATFORM_ID:Linux>:dl>
@@ -299,7 +263,7 @@ endif()
 ###############################################################################
 # Add the Integration Service Core testing subdirectory
 ###############################################################################
-if(BUILD_LIBRARY)
+if(BUILD_LIBRARY AND BUILD_TESTS)
   include(CTest)
   add_subdirectory(test)
 endif()

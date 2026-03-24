@@ -23,8 +23,6 @@
 #include <is/json-xtypes/json.hpp>
 #include <is/core/Message.hpp>
 
-namespace xtypes = eprosima::xtypes;
-
 namespace eprosima {
 namespace is {
 namespace json_xtypes {
@@ -62,33 +60,31 @@ private:
 };
 
 /**
- * @brief Convert a DynamicData instance into an equivalent JSON format representation
- *        of the very same data instance.
+ * @brief Convert a DynamicData instance into an equivalent JSON format representation.
  *
- * @param[in] input The xTypes DynamicData to be converted to JSON format.
+ * @param[in] input The DynamicData to be converted to JSON format.
  *
- * @param[in] submember The submember of the Json data where the converted field will be inserted.
- *            Defaults to empty.
+ * @param[in] submember Optional key under which the top-level object is nested in the output.
  *
- * @returns A Json object representing the converted data.
+ * @returns A Json object representing the data.
  */
 Json IS_JSON_XTYPES_API convert(
-        const xtypes::DynamicData& input,
+        const eprosima::xtypes::DynamicData& input,
         const std::string submember = "");
 
 /**
- * @brief Convert a Json data representation into its equivalent xTypes DynamicData instance.
+ * @brief Convert a Json data representation into a DynamicData instance.
  *
- * @param[in] type The DynamicType used to construct the DynamicData, using the Json input.
+ * @param[in] type The DynamicType used to construct the DynamicData.
  *
- * @param[in] input The Json to be converted to a DynamicData.
+ * @param[in] input The Json to convert.
  *
- * @param[in] submember The submember of the Json value to be converted to xTypes. By default, it is empty.
+ * @param[in] submember Optional key within the Json object to read from.
  *
- * @returns The resulting DynamicData converted data instance.
+ * @returns The populated DynamicData instance.
  */
-xtypes::DynamicData IS_JSON_XTYPES_API convert(
-        const xtypes::DynamicType& type,
+eprosima::xtypes::DynamicData IS_JSON_XTYPES_API convert(
+        const eprosima::xtypes::DynamicType& type,
         const Json& input,
         const std::string submember = "");
 

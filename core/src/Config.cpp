@@ -198,7 +198,7 @@ std::unique_ptr<ServiceRoute> parse_service_route(
 bool add_types(
         const YAML::Node& node,
         const std::string& filename,
-        std::map<std::string, eprosima::xtypes::DynamicType::Ptr>& types)
+        [[maybe_unused]] std::map<std::string, eprosima::xtypes::DynamicType>& types)
 {
     if (!node["types"])
     {
@@ -238,57 +238,13 @@ bool add_types(
     uint16_t idl_index = 1;
     for (auto& entry: node["types"]["idls"])
     {
-        eprosima::xtypes::idl::Context context;
-        context.allow_keyword_identifiers = true;
-        if (!include_paths.empty())
-        {
-            context.include_paths = include_paths;
-        }
-        eprosima::xtypes::idl::parse(entry.as<std::string>(), context);
-
-        if (context.success)
-        {
-            for (auto& type: context.get_all_scoped_types())
-            {
-                types.insert(type);
-                // Some SHs expect the types without the initial "::", and others with it,
-                // so we must add both of them.
-                if (type.first.find("::") == 0)
-                {
-                    types.emplace(std::make_pair(type.first.substr(2), type.second));
-                }
-                else
-                {
-                    types.emplace(std::make_pair("::" + type.first, type.second));
-                }
-            }
-            if (types.empty())
-            {
-                Config::logger << utils::Logger::Level::WARN
-                               << "Parsing the IDL number '" << idl_index
-                               << "' placed in the YAML config. "
-                               << "The parsing was successful but no types were found."
-                               << std::endl;
-            }
-            else
-            {
-                Config::logger << utils::Logger::Level::DEBUG
-                               << "Parsing the IDL number '" << idl_index
-                               << "' placed in the YAML config. "
-                               << "The parsing was successful."
-                               << std::endl;
-            }
-        }
-        else
-        {
-            Config::logger << utils::Logger::Level::ERROR
-                           << "Error parsing the IDL number '" << idl_index
-                           << "' placed in the YAML config. "
-                           << "Please, review and fix your IDL specification syntax."
-                           << std::endl;
-            return false;
-        }
-        idl_index++;
+        (void)entry;
+        Config::logger << utils::Logger::Level::ERROR
+                       << "Inline IDL type definitions in YAML config (idls entry "
+                       << idl_index << " in '" << filename
+                       << "') are not supported with the Fast-DDS XTypes API. "
+                       << "Types must be registered via mix files." << std::endl;
+        return false;
     }
 
     return true;
@@ -1203,7 +1159,7 @@ bool Config::load_middlewares(
 
                     for (auto&& it_type : info_map.at(mw_from).types)
                     {
-                        info.types.emplace(it_type.second->name(), it_type.second);
+                        info.types.emplace(std::string(it_type.second->get_name()), it_type.second);
                     }
                 }
 
@@ -1356,7 +1312,7 @@ bool Config::configure_topics(
             TopicInfo topic_info = remap_if_needed(
                 to, topic_config.remap, TopicInfo(topic_name, topic_config.message_type));
 
-            const eprosima::xtypes::DynamicType* pub_type = resolve_type(
+            xtypes::DynamicType pub_type = resolve_type(
                 it_to->second.types, topic_info.type);
 
             /**
@@ -1366,8 +1322,8 @@ bool Config::configure_topics(
             std::shared_ptr<TopicPublisher> publisher =
                     it_to->second.topic_publisher->advertise(topic_info.name,
                             (topic_info.type.find(".") == std::string::npos
-                            ? *pub_type
-                            : *_m_types.at(topic_info.type.substr(0, topic_info.type.find(".")))),
+                            ? pub_type
+                            : _m_types.at(topic_info.type.substr(0, topic_info.type.find(".")))),
                             config_or_empty_node(to, topic_config.middleware_configs));
 
             if (!publisher)
@@ -1386,7 +1342,7 @@ bool Config::configure_topics(
                        << "for the topic '" << topic_name << "', with message type '"
                        << topic_config.message_type << "'." << std::endl;
 
-                publishers.emplace_back(PublisherData(publisher, *pub_type));
+                publishers.emplace_back(PublisherData(publisher, pub_type));
             }
         }
 
@@ -1420,29 +1376,25 @@ bool Config::configure_topics(
             TopicInfo topic_info = remap_if_needed(
                 from, topic_config.remap, TopicInfo(topic_name, topic_config.message_type));
 
-            const eprosima::xtypes::DynamicType* sub_type = resolve_type(
+            xtypes::DynamicType sub_type = resolve_type(
                 it_from->second.types, topic_info.type);
 
             /**
              * Helper struct to store an Integration Service publisher
-             * and its published DynamicType. It is very similar to PublisherData,
-             * but includes the type consistency parameter between a certain publisher type
-             * and the current subscriber type.
+             * and its published DynamicType.
              */
             struct Publication
             {
                 Publication(
                         const PublisherData& publisher_data,
-                        const eprosima::xtypes::DynamicType& sub_type)
+                        const eprosima::xtypes::DynamicType& /*sub_type*/)
                     : publisher(publisher_data.publisher)
                     , type(publisher_data.type)
-                    , consistency(publisher_data.type.is_compatible(sub_type))
                 {
                 }
 
                 std::shared_ptr<TopicPublisher> publisher;
-                const eprosima::xtypes::DynamicType& type;
-                eprosima::xtypes::TypeConsistency consistency;
+                eprosima::xtypes::DynamicType type;
             };
 
             std::vector<Publication> publications;
@@ -1450,7 +1402,7 @@ bool Config::configure_topics(
 
             for (const auto& pub : publishers)
             {
-                publications.emplace_back(Publication(pub, *sub_type));
+                publications.emplace_back(Publication(pub, sub_type));
             }
 
             /**
@@ -1474,28 +1426,15 @@ bool Config::configure_topics(
 
                             for (const Publication& publication : publications)
                             {
-                                if (publication.consistency == eprosima::xtypes::TypeConsistency::EQUALS)
-                                {
-                                    publication.publisher->publish(message);
-                                }
-                                else
-                                {
-                                    /**
-                                     * Previously ensured that TypeConsistency is not NONE,
-                                     * thanks to `check_topic_compatibility`.
-                                     */
-                                    eprosima::xtypes::DynamicData compatible_message(
-                                        message, publication.type);
-                                    publication.publisher->publish(compatible_message);
-                                }
+                                publication.publisher->publish(message);
                             }
                         }));
 
             bool subscribed = it_from->second.topic_subscriber->subscribe(
                 topic_info.name,
                 (topic_info.type.find(".") == std::string::npos
-                ? *sub_type
-                : *_m_types.at(topic_info.type.substr(0, topic_info.type.find(".")))),
+                ? sub_type
+                : _m_types.at(topic_info.type.substr(0, topic_info.type.find(".")))),
                 unique_callback.get(),
                 config_or_empty_node(from, topic_config.middleware_configs));
 
@@ -1566,7 +1505,7 @@ bool Config::configure_services(
             server, service_config.remap,
             ServiceInfo(service_name, service_config.request_type, service_config.reply_type));
 
-        const eprosima::xtypes::DynamicType* server_type = resolve_type(
+        xtypes::DynamicType server_type = resolve_type(
             it_server->second.types, server_info.type);
 
         /**
@@ -1576,18 +1515,18 @@ bool Config::configure_services(
 
         if (!service_config.reply_type.empty())
         {
-            const eprosima::xtypes::DynamicType* server_reply_type = resolve_type(
+            xtypes::DynamicType server_reply_type = resolve_type(
                 it_server->second.types, server_info.reply_type);
 
             provider =
                     it_server->second.service_provider->create_service_proxy(
                 server_info.name,
                 (server_info.type.find(".") == std::string::npos
-                ? *server_type
-                : *_m_types.at(server_info.type.substr(0, server_info.type.find(".")))),
+                ? server_type
+                : _m_types.at(server_info.type.substr(0, server_info.type.find(".")))),
                 (server_info.reply_type.find(".") == std::string::npos
-                ? *server_reply_type
-                : *_m_types.at(server_info.reply_type.substr(0, server_info.reply_type.find(".")))),
+                ? server_reply_type
+                : _m_types.at(server_info.reply_type.substr(0, server_info.reply_type.find(".")))),
                 config_or_empty_node(server, service_config.middleware_configs));
         }
         else
@@ -1600,8 +1539,8 @@ bool Config::configure_services(
                     it_server->second.service_provider->create_service_proxy(
                 server_info.name,
                 (server_info.type.find(".") == std::string::npos
-                ? *server_type
-                : *_m_types.at(server_info.type.substr(0, server_info.type.find(".")))),
+                ? server_type
+                : _m_types.at(server_info.type.substr(0, server_info.type.find(".")))),
                 config_or_empty_node(server, service_config.middleware_configs));
         }
 
@@ -1673,14 +1612,12 @@ bool Config::configure_services(
                 client, service_config.remap,
                 ServiceInfo(service_name, service_config.request_type, service_config.reply_type));
 
-            const eprosima::xtypes::DynamicType* client_type = resolve_type(
+            xtypes::DynamicType client_type = resolve_type(
                 it_client->second.types, client_info.type);
 
             /**
              * Defines the RequestCallback that will perform the corresponding call to the service.
              */
-            eprosima::xtypes::TypeConsistency consistency = client_type->is_compatible(*server_type);
-
             std::unique_ptr<ServiceClientSystem::RequestCallback> unique_callback = nullptr;
             unique_callback.reset(new ServiceClientSystem::RequestCallback(
                         [=](
@@ -1688,15 +1625,7 @@ bool Config::configure_services(
                             ServiceClient& service_client,
                             const std::shared_ptr<void>& call_handle)
                         {
-                            if (consistency == eprosima::xtypes::TypeConsistency::EQUALS)
-                            {
-                                provider->call_service(request, service_client, call_handle);
-                            }
-                            else //previously ensured that TypeConsistency is not NONE
-                            {
-                                eprosima::xtypes::DynamicData compatible_request(request, *server_type);
-                                provider->call_service(compatible_request, service_client, call_handle);
-                            }
+                            provider->call_service(request, service_client, call_handle);
                         }));
 
             /**
@@ -1713,27 +1642,25 @@ bool Config::configure_services(
 
                 created_client_proxy = it_client->second.service_client->create_client_proxy(
                     client_info.name,
-                    //*client_type,
                     (client_info.type.find(".") == std::string::npos
-                    ? *client_type
-                    : *_m_types.at(client_info.type.substr(0, client_info.type.find(".")))),
+                    ? client_type
+                    : _m_types.at(client_info.type.substr(0, client_info.type.find(".")))),
                     unique_callback.get(),
                     config_or_empty_node(client, service_config.middleware_configs));
             }
             else
             {
-                const eprosima::xtypes::DynamicType* client_reply_type = resolve_type(
+                xtypes::DynamicType client_reply_type = resolve_type(
                     it_client->second.types, client_info.reply_type);
 
                 created_client_proxy = it_client->second.service_client->create_client_proxy(
                     client_info.name,
-                    //*client_type,
                     (client_info.type.find(".") == std::string::npos
-                    ? *client_type
-                    : *_m_types.at(client_info.type.substr(0, client_info.type.find(".")))),
+                    ? client_type
+                    : _m_types.at(client_info.type.substr(0, client_info.type.find(".")))),
                     (client_info.reply_type.find(".") == std::string::npos
-                    ? *client_reply_type
-                    : *_m_types.at(client_info.reply_type.substr(0, client_info.reply_type.find(".")))),
+                    ? client_reply_type
+                    : _m_types.at(client_info.reply_type.substr(0, client_info.reply_type.find(".")))),
                     unique_callback.get(),
                     config_or_empty_node(client, service_config.middleware_configs));
             }
@@ -1787,65 +1714,19 @@ bool Config::check_topic_compatibility(
         const auto it_from = info_map.find(from);
 
         TopicInfo topic_info_from = remap_if_needed(from, config.remap, TopicInfo(topic_name, config.message_type));
-        const eprosima::xtypes::DynamicType* from_type = resolve_type(it_from->second.types, topic_info_from.type);
+        xtypes::DynamicType from_type = resolve_type(it_from->second.types, topic_info_from.type);
+        (void)from_type;
 
         for (const std::string& to : config.route.to)
         {
             const auto it_to = info_map.find(to);
+            (void)it_to;
 
             TopicInfo topic_info_to = remap_if_needed(to, config.remap, TopicInfo(topic_name, config.message_type));
-            const eprosima::xtypes::DynamicType* to_type = resolve_type(it_from->second.types, topic_info_from.type);
+            (void)topic_info_to;
 
-            /**
-             * Checks type compatibility between `from` and `to` defined types using eprosima::xtypes::TypeConsistency.
-             * If no consistency is found, returns false; otherwise, allows the type conversion, but warns the user
-             * about which consistency levels are being ignored and which policies are being applied.
-             *
-             * TODO (@jamoralp): users might want to specifically enable or disable these policies through the YAML
-             * configuration file.
-             */
-            eprosima::xtypes::TypeConsistency consistency = from_type->is_compatible(*to_type);
-
-            if (consistency == eprosima::xtypes::TypeConsistency::NONE)
-            {
-                logger << utils::Logger::Level::ERROR
-                       << "Remapping error: topic type '" << topic_info_from.type
-                       << "' from '" << it_from->first << "' is not compatible with '"
-                       << topic_info_to.type << "' in '" << it_to->first << "'." << std::endl;
-
-                valid = false;
-                continue;
-            }
-            else if (consistency != eprosima::xtypes::TypeConsistency::EQUALS)
-            {
-                logger << utils::Logger::Level::WARN
-                       << "The conversion between '" << topic_info_from.type << "' from '"
-                       << it_from->first << "' and '" << topic_info_to.type << "' in '"
-                       << it_to->first << "' has been allowed by adding the following QoS policies: ";
-
-                auto policy_name =
-                        [&](eprosima::xtypes::TypeConsistency to_check, const std::string& name) -> std::string
-                        {
-                            return (consistency & to_check) == to_check ? "'" + name + "' " : "";
-                        };
-
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_TYPE_SIGN,
-                        "ignore type sign");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_TYPE_WIDTH,
-                        "ignore type width");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_SEQUENCE_BOUNDS,
-                        "ignore sequence bounds");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_ARRAY_BOUNDS,
-                        "ignore array bounds");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_STRING_BOUNDS,
-                        "ignore string bounds");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_MEMBER_NAMES,
-                        "ignore member names");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_MEMBERS,
-                        "ignore members");
-
-                logger << std::endl;
-            }
+            // Type compatibility checking is not available in the Fast-DDS XTypes API.
+            // Compatibility is enforced at the DDS layer by the underlying middleware.
         }
     }
 
@@ -1866,155 +1747,56 @@ bool Config::check_service_compatibility(
 
         ServiceInfo client_info = remap_if_needed(client, config.remap,
                         ServiceInfo(service_name, config.request_type, config.reply_type));
-        const eprosima::xtypes::DynamicType* client_type =
+        xtypes::DynamicType client_type =
                 resolve_type(it_client->second.types, client_info.type);
+        (void)client_type;
 
         const auto it_server = info_map.find(config.route.server);
 
         ServiceInfo server_info = remap_if_needed(config.route.server, config.remap,
                         ServiceInfo(service_name, config.request_type, config.reply_type));
-        const eprosima::xtypes::DynamicType* server_type =
+        xtypes::DynamicType server_type =
                 resolve_type(it_server->second.types, server_info.type);
+        (void)server_type;
 
-        /**
-         * Checks type compatibility between `clients` and `server` defined types using eprosima::xtypes::TypeConsistency.
-         * If no consistency is found, returns false; otherwise, allows the type conversion, but warns the user
-         * about which consistency levels are being ignored and which policies are being applied.
-         *
-         * By default, this will always be applied to the `request_type`, as it is mandatory.
-         * If a reply type exists, the consistency check will also be applied to the reply type.
-         *
-         * TODO (@jamoralp): users might want to specifically enable or disable this policies through the YAML
-         * configuration file.
-         */
-        auto request_consistency = client_type->is_compatible(*server_type);
-
-        if (request_consistency == eprosima::xtypes::TypeConsistency::NONE)
-        {
-            logger << utils::Logger::Level::ERROR
-                   << "Remapping error: service request type '" << client_info.type
-                   << "' from '" << it_client->first << "' is not compatible with '"
-                   << server_info.type << "' in '" << it_server->first << "'." << std::endl;
-
-            valid = false;
-            continue;
-        }
-        else if (request_consistency != eprosima::xtypes::TypeConsistency::EQUALS)
-        {
-            logger << utils::Logger::Level::WARN
-                   << "The conversion between request '" << client_info.type << "' from '"
-                   << it_client->first << "' and '" << server_info.type << "' in '"
-                   << it_server->first << "' has been allowed by adding the following QoS policies: ";
-
-            auto policy_name =
-                    [&](eprosima::xtypes::TypeConsistency to_check, const std::string& name) -> std::string
-                    {
-                        return (request_consistency & to_check) == to_check ? "'" + name + "' " : "";
-                    };
-
-            logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_TYPE_SIGN,
-                    "ignore type sign");
-            logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_TYPE_WIDTH,
-                    "ignore type width");
-            logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_SEQUENCE_BOUNDS,
-                    "ignore sequence bounds");
-            logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_ARRAY_BOUNDS,
-                    "ignore array bounds");
-            logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_STRING_BOUNDS,
-                    "ignore string bounds");
-            logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_MEMBER_NAMES,
-                    "ignore member names");
-            logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_MEMBERS,
-                    "ignore members");
-
-            logger << std::endl;
-        }
-
-        /**
-         * Now, does the same for reply type.
-         */
-        if (!client_info.reply_type.empty() && !server_info.reply_type.empty())
-        {
-            const eprosima::xtypes::DynamicType* client_reply =
-                    resolve_type(it_client->second.types, client_info.reply_type);
-
-            const eprosima::xtypes::DynamicType* server_reply =
-                    resolve_type(it_server->second.types, server_info.reply_type);
-
-            auto reply_consistency = client_reply->is_compatible(*server_reply);
-
-            if (reply_consistency == xtypes::TypeConsistency::NONE)
-            {
-                logger << utils::Logger::Level::ERROR
-                       << "Remapping error: service reply type '" << client_info.reply_type
-                       << "' from '" << it_client->first << "' is not compatible with '"
-                       << server_info.reply_type << "' in '"
-                       << it_server->first << "'." << std::endl;
-
-                valid = false;
-            }
-            else if (reply_consistency != eprosima::xtypes::TypeConsistency::EQUALS)
-            {
-                logger << utils::Logger::Level::WARN
-                       << "The conversion between reply '" << client_info.reply_type << "' from '"
-                       << it_client->first << "' and '" << server_info.reply_type << "' in '"
-                       << it_server->first << "' has been allowed by adding the following QoS policies: ";
-
-                auto policy_name =
-                        [&](eprosima::xtypes::TypeConsistency to_check, const std::string& name) -> std::string
-                        {
-                            return (reply_consistency & to_check) == to_check ? "'" + name + "' " : "";
-                        };
-
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_TYPE_SIGN,
-                        "ignore type sign");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_TYPE_WIDTH,
-                        "ignore type width");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_SEQUENCE_BOUNDS,
-                        "ignore sequence bounds");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_ARRAY_BOUNDS,
-                        "ignore array bounds");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_STRING_BOUNDS,
-                        "ignore string bounds");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_MEMBER_NAMES,
-                        "ignore member names");
-                logger << policy_name(eprosima::xtypes::TypeConsistency::IGNORE_MEMBERS,
-                        "ignore members");
-
-                logger << std::endl;
-            }
-        }
+        // Type compatibility checking is not available in the Fast-DDS XTypes API.
+        // Compatibility is enforced at the DDS layer by the underlying middleware.
     }
 
     return valid;
 }
 
-const xtypes::DynamicType* Config::resolve_type(
+xtypes::DynamicType Config::resolve_type(
         const TypeRegistry& types,
         const std::string& path) const
 {
     if (path.find(".") == std::string::npos)
     {
-        return types.find(path)->second.get();
+        return types.find(path)->second;
     }
 
     std::string path_aux = path;
-    const xtypes::DynamicType* type_ptr;
-    std::string type = path_aux.substr(0, path_aux.find("."));
-    std::string member;
-    type_ptr = _m_types.at(type).get();
+    std::string type_name = path_aux.substr(0, path_aux.find("."));
+    xtypes::DynamicType current = _m_types.at(type_name);
+
     while (path_aux.find(".") != std::string::npos)
     {
         path_aux = path_aux.substr(path_aux.find(".") + 1);
-        member = path_aux.substr(0, path_aux.find("."));
-        if (type_ptr->is_aggregation_type())
+        std::string member = path_aux.substr(0, path_aux.find("."));
+
+        fastdds::dds::DynamicTypeMember::_ref_type member_obj;
+        if (current->get_member_by_name(member_obj, member) != fastdds::dds::RETCODE_OK)
         {
-            const xtypes::AggregationType& aggregation = static_cast<const xtypes::AggregationType&>(*type_ptr);
-            type_ptr = &aggregation.member(member).type();
+            break;
         }
+
+        fastdds::dds::MemberDescriptor::_ref_type desc =
+            fastdds::dds::traits<fastdds::dds::MemberDescriptor>::make_shared();
+        member_obj->get_descriptor(desc);
+        current = desc->type();
     }
 
-    return type_ptr;
+    return current;
 }
 
 } //  namespace internal

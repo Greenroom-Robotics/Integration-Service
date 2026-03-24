@@ -8,8 +8,8 @@
   <license>UNLICENSED</license>
   <url type="website">https://github.com/Greenroom-Robotics/Integration-Service/tree/gr</url>
 
-  <build_depend>xtypes</build_depend>
   <build_depend>libboost-program-options-dev</build_depend>
+  <depend>fastdds</depend>
   <depend>yaml-cpp</depend>
 
   <export>

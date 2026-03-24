@@ -1,7 +1,3 @@
-if(NOT BUILD_TESTS)
-  return()
-endif()
-
 # TODO (@jamoralp): this definitely needs an improvement. Also, think about more unit test for the core itself.
 include(CTest)
 include(${PROJECT_SOURCE_DIR}/../core/cmake/common/gtest.cmake)

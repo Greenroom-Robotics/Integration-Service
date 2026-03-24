@@ -536,7 +536,7 @@ public:
      *
      * @returns A pointer to the inner DynamicType representing the type requested by the user.
      */
-    const eprosima::xtypes::DynamicType* resolve_type(
+    eprosima::xtypes::DynamicType resolve_type(
             const TypeRegistry& types,
             const std::string& path) const;
 
@@ -562,7 +562,7 @@ private:
 
     std::map<std::string, RequiredTypes> _m_required_types;
 
-    std::map<std::string, eprosima::xtypes::DynamicType::Ptr> _m_types;
+    std::map<std::string, eprosima::xtypes::DynamicType> _m_types;
 
 };
 
