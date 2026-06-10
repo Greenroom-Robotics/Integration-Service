@@ -1159,6 +1159,13 @@ bool Config::load_middlewares(
 
                     for (auto&& it_type : info_map.at(mw_from).types)
                     {
+                        // Preserve the source middleware's registry key (the
+                        // canonical 'package/msg/Type' name used by the config and
+                        // RequiredTypes). The Fast-DDS DynamicType's get_name() is
+                        // the IDL-qualified form ('package::msg::Type'), which no
+                        // longer matches those keys, so also index by it for
+                        // lookups that go through the type name.
+                        info.types.emplace(it_type.first, it_type.second);
                         info.types.emplace(std::string(it_type.second->get_name()), it_type.second);
                     }
                 }

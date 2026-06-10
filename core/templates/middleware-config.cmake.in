@@ -2,7 +2,7 @@
 #
 # This package helps is middleware interface extensions to link against
 
-cmake_minimum_required(VERSION 3.5.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10)
 
 if(is-@middleware@_CONFIG_INCLUDED)
   return()

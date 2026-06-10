@@ -18,7 +18,7 @@
 ###################################################################################
 # CMake build rules for the Integration Service JSON-xTypes conversion library
 ###################################################################################
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.10)
 
 project(is-json-xtypes VERSION "3.1.0" LANGUAGES CXX)
 

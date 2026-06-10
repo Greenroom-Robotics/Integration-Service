@@ -1,6 +1,6 @@
 # - Config file for the json<-->xtypes conversion package
 
-cmake_minimum_required(VERSION 3.5.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10)
 
 if(is-json-xtypes_CONFIG_INCLUDED)
   return()
